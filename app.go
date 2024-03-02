@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"golang.org/x/term"
 )
@@ -52,27 +53,40 @@ func (app *App) Run() {
 		term.Restore(int(os.Stdin.Fd()), oldState)
 		os.Exit(0)
 	}()
+	terminal := NewTerminal()
 	for {
 		fmt.Println("Select an option:")
 		for _, option := range app.MenuOptions {
-			fmt.Println(option.MenuEntry)
+			terminal.WriteLine(option.MenuEntry)
 		}
 		a := []any{fmt.Sprintf("%d. Exit", len(app.MenuOptions)+1)}
-		fmt.Fprintln(os.Stdout, a...)
+		err := terminal.WriteLine(fmt.Sprint(a...))
+		if err != nil {
+			terminal.WriteLine("Error writing to terminal" + err.Error())
+			return
+		}
 
-		var choice int
-		fmt.Print("Enter your choice: ")
-		fmt.Scanln(&choice)
+		terminal.WriteLine("Enter your choice: ")
+		choiceStr, err := terminal.ReadLine()
+		if err != nil {
+			terminal.WriteLine("Error reading input: " + err.Error())
+			return
+		}
+
+		choice, err := strconv.Atoi(choiceStr)
+		if err != nil {
+			terminal.WriteLine("Invalid input. Please enter a number.")
+			continue
+		}
 
 		if choice > 0 && choice <= len(app.MenuOptions) {
 			app.MenuOptions[choice-1].EventFunction()
 		} else if choice == len(app.MenuOptions)+1 {
-			fmt.Println("Exiting...")
+			terminal.WriteLine("Exiting...")
 			return
 		} else {
-			fmt.Println("Invalid choice. Please try again.")
+			terminal.WriteLine("Invalid choice. Please try again.")
 		}
-
-		fmt.Println()
+		terminal.WriteLine("")
 	}
 }
